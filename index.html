@@ -29,8 +29,21 @@
             background: #6b7280;
         }
     </style>
+    <!-- Google Tag Manager (noscript) - Start of GTM code snippet -->
+    <!-- REPLACE 'GTM-XXXXXXX' with your actual GTM Container ID -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
+    <!-- End Google Tag Manager -->
 </head>
 <body class="min-h-screen flex flex-col items-center p-4 sm:p-6 lg:p-8">
+    <!-- Google Tag Manager (noscript) - Start of GTM code snippet -->
+    <!-- REPLACE 'GTM-XXXXXXX' with your actual GTM Container ID -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
 
     <!-- Header -->
     <header class="w-full max-w-7xl bg-white shadow-md rounded-lg p-4 mb-8 flex flex-col sm:flex-row justify-between items-center">
@@ -209,8 +222,17 @@
             });
             document.getElementById(pageId).classList.remove('hidden');
             currentPage = pageId;
-            // You would typically send a GA page view here
-            console.log(`Page view: ${pageId}`);
+            // PUSHING A 'page_view' EVENT TO THE DATALAYER FOR GTM
+            // This allows GTM to trigger a GA4 page view tag.
+            // Ensure dataLayer is initialized by GTM snippet before this is called.
+            if (window.dataLayer) {
+                window.dataLayer.push({
+                    event: 'page_view',
+                    page_path: `/${pageId}`, // Example path based on section ID
+                    page_title: document.title + ' - ' + pageId.replace('-', ' ').replace('page', 'Page') // Example title
+                });
+                console.log(`dataLayer.push: page_view - ${pageId}`);
+            }
         }
 
         /**
@@ -260,9 +282,22 @@
                     const product = products.find(p => p.id === productId);
                     if (product) {
                         renderProductDetails(product);
-                        showPage('product-details-page');
-                        // You would typically send a GA event here for product view
-                        console.log(`GA Event: Product View - ${product.name}`);
+                        showPage('product-details-page'); // Call showPage to trigger page_view for product details
+                        // PUSHING 'view_item' EVENT TO THE DATALAYER FOR GTM
+                        if (window.dataLayer) {
+                            window.dataLayer.push({
+                                event: 'view_item',
+                                ecommerce: {
+                                    items: [{
+                                        item_id: product.id,
+                                        item_name: product.name,
+                                        item_category: product.category,
+                                        price: product.price
+                                    }]
+                                }
+                            });
+                            console.log(`dataLayer.push: view_item - ${product.name}`);
+                        }
                     }
                 });
             });
@@ -313,8 +348,22 @@
             }
             saveCart();
             updateCartItemCount();
-            // You would typically send a GA event here for add to cart
-            console.log(`GA Event: Add to Cart - ${product.name}, Quantity: ${cart[product.id].quantity}`);
+            // PUSHING 'add_to_cart' EVENT TO THE DATALAYER FOR GTM
+            if (window.dataLayer) {
+                window.dataLayer.push({
+                    event: 'add_to_cart',
+                    ecommerce: {
+                        items: [{
+                            item_id: product.id,
+                            item_name: product.name,
+                            item_category: product.category,
+                            price: product.price,
+                            quantity: cart[product.id].quantity
+                        }]
+                    }
+                });
+                console.log(`dataLayer.push: add_to_cart - ${product.name}`);
+            }
         }
 
         /**
@@ -322,7 +371,8 @@
          * @param {string} productId - The ID of the product to remove.
          */
         function removeFromCart(productId) {
-            if (cart[productId]) {
+            const productRemoved = cart[productId];
+            if (productRemoved) {
                 cart[productId].quantity--;
                 if (cart[productId].quantity <= 0) {
                     delete cart[productId];
@@ -331,8 +381,22 @@
             saveCart();
             updateCartItemCount();
             renderCart(); // Re-render cart after modification
-            // You would typically send a GA event here for remove from cart
-            console.log(`GA Event: Remove from Cart - ${productId}`);
+            // PUSHING 'remove_from_cart' EVENT TO THE DATALAYER FOR GTM
+            if (window.dataLayer && productRemoved) {
+                 window.dataLayer.push({
+                    event: 'remove_from_cart',
+                    ecommerce: {
+                        items: [{
+                            item_id: productRemoved.id,
+                            item_name: productRemoved.name,
+                            item_category: productRemoved.category,
+                            price: productRemoved.price,
+                            quantity: 1 // For simplicity, assume one item is removed per click
+                        }]
+                    }
+                });
+                console.log(`dataLayer.push: remove_from_cart - ${productRemoved.name}`);
+            }
         }
 
         /**
@@ -378,11 +442,27 @@
                 button.addEventListener('click', (event) => {
                     const productId = event.target.dataset.productId;
                     if (cart[productId].quantity > 1) {
-                        cart[productId].quantity--;
+                        const product = cart[productId];
+                        product.quantity--;
                         saveCart();
                         updateCartItemCount();
                         renderCart();
-                        console.log(`GA Event: Quantity Decreased - ${cart[productId].name}`);
+                        // PUSHING 'remove_from_cart' event for quantity decrease
+                        if (window.dataLayer) {
+                            window.dataLayer.push({
+                                event: 'remove_from_cart',
+                                ecommerce: {
+                                    items: [{
+                                        item_id: product.id,
+                                        item_name: product.name,
+                                        item_category: product.category,
+                                        price: product.price,
+                                        quantity: 1 // Only decrementing by 1
+                                    }]
+                                }
+                            });
+                            console.log(`dataLayer.push: Quantity Decreased (remove_from_cart) - ${product.name}`);
+                        }
                     } else {
                         // If quantity is 1, remove the item
                         removeFromCart(productId);
@@ -393,21 +473,57 @@
             document.querySelectorAll('.increase-qty-btn').forEach(button => {
                 button.addEventListener('click', (event) => {
                     const productId = event.target.dataset.productId;
-                    cart[productId].quantity++;
+                    const product = cart[productId];
+                    product.quantity++;
                     saveCart();
                     updateCartItemCount();
                     renderCart();
-                    console.log(`GA Event: Quantity Increased - ${cart[productId].name}`);
+                    // PUSHING 'add_to_cart' event for quantity increase
+                    if (window.dataLayer) {
+                        window.dataLayer.push({
+                            event: 'add_to_cart',
+                            ecommerce: {
+                                items: [{
+                                    item_id: product.id,
+                                    item_name: product.name,
+                                    item_category: product.category,
+                                    price: product.price,
+                                    quantity: 1 // Only incrementing by 1
+                                }]
+                            }
+                        });
+                        console.log(`dataLayer.push: Quantity Increased (add_to_cart) - ${product.name}`);
+                    }
                 });
             });
 
             document.querySelectorAll('.remove-item-btn').forEach(button => {
                 button.addEventListener('click', (event) => {
                     const productId = event.target.dataset.productId;
+                    const productToRemove = cart[productId]; // Get product data before removing
+                    const quantityToRemove = productToRemove.quantity; // Get current quantity to send as removed
                     removeFromCart(productId);
                     showCustomModal('Item Removed', 'Product has been removed from your cart.');
+
+                    // PUSHING 'remove_from_cart' event for full item removal
+                    if (window.dataLayer && productToRemove) {
+                        window.dataLayer.push({
+                            event: 'remove_from_cart',
+                            ecommerce: {
+                                items: [{
+                                    item_id: productToRemove.id,
+                                    item_name: productToRemove.name,
+                                    item_category: productToRemove.category,
+                                    price: productToRemove.price,
+                                    quantity: quantityToRemove // Send the total quantity that was removed
+                                }]
+                            }
+                        });
+                        console.log(`dataLayer.push: Full Item Removed (remove_from_cart) - ${productToRemove.name}, Quantity: ${quantityToRemove}`);
+                    }
                 });
             });
+
 
             // Disable checkout button if cart is empty
             if (Object.keys(cart).length === 0) {
@@ -428,6 +544,23 @@
         cartNav.addEventListener('click', () => {
             renderCart(); // Ensure cart is up-to-date before showing
             showPage('cart-page');
+            // PUSHING 'view_cart' EVENT TO THE DATALAYER FOR GTM
+            if (window.dataLayer) {
+                const cartItemsForGTM = Object.values(cart).map(item => ({
+                    item_id: item.id,
+                    item_name: item.name,
+                    item_category: item.category,
+                    price: item.price,
+                    quantity: item.quantity
+                }));
+                window.dataLayer.push({
+                    event: 'view_cart',
+                    ecommerce: {
+                        items: cartItemsForGTM
+                    }
+                });
+                console.log('dataLayer.push: view_cart', cartItemsForGTM);
+            }
         });
 
         backToHomeBtn.addEventListener('click', () => {
@@ -436,7 +569,25 @@
 
         checkoutButton.addEventListener('click', () => {
             if (Object.keys(cart).length > 0) {
-                // Simulate a purchase event
+                // PUSHING 'begin_checkout' EVENT TO THE DATALAYER FOR GTM
+                const checkoutItems = Object.values(cart).map(item => ({
+                    item_id: item.id,
+                    item_name: item.name,
+                    item_category: item.category,
+                    price: item.price,
+                    quantity: item.quantity
+                }));
+                if (window.dataLayer) {
+                    window.dataLayer.push({
+                        event: 'begin_checkout',
+                        ecommerce: {
+                            items: checkoutItems
+                        }
+                    });
+                    console.log('dataLayer.push: begin_checkout', checkoutItems);
+                }
+
+                // Simulate a purchase event AFTER checkout has begun
                 const purchaseData = {
                     transaction_id: 'TRX' + Date.now(),
                     value: parseFloat(cartTotalSpan.textContent.replace('$', '')),
@@ -449,7 +600,15 @@
                         quantity: item.quantity
                     }))
                 };
-                console.log('GA Event: Purchase', purchaseData);
+                // PUSHING 'purchase' EVENT TO THE DATALAYER FOR GTM
+                if (window.dataLayer) {
+                    window.dataLayer.push({
+                        event: 'purchase',
+                        ecommerce: purchaseData
+                    });
+                    console.log('dataLayer.push: purchase', purchaseData);
+                }
+
                 showPage('confirmation-page');
                 cart = {}; // Clear cart after checkout
                 saveCart();
@@ -470,7 +629,7 @@
         window.onload = function() {
             renderProducts();
             updateCartItemCount();
-            showPage(currentPage); // Show the initial page
+            showPage(currentPage); // Show the initial page, which will trigger the first page_view
             console.log('Website Loaded');
         };
     </script>
